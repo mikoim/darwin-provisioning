@@ -1,0 +1,198 @@
+---
+- hosts: 127.0.0.1
+  connection: local
+
+  vars:
+    pwd: "{{ansible_env.PWD}}"
+    real_name: Eshin Kunishima
+    email: ek@esh.ink
+    homebrew_packages:
+      - aria2
+      - arp-scan
+      - asciinema
+      - autoenv
+      - autojump
+      - awscli
+      - axel
+      - curl
+      - exiftool
+      - fish
+      - ffmpeg
+      - fswatch
+      - git
+      - gnupg2
+      - gnuplot
+      - go
+      - gpg-agent
+      - heroku-toolbelt
+      - htop
+      - httpie
+      - hugo
+      - iftop
+      - imagemagick
+      - less
+      - media-info
+      - mtr
+      - nano
+      - nkf
+      - nmap
+      - node
+      - openssh
+      - p7zip
+      - peco
+      - pinentry-mac
+      - pypy
+      - pypy3
+      - python
+      - python3
+      - rbenv
+      - rsync
+      - screen
+      - sqlmap
+      - sslscan
+      - tmux
+      - tree
+      - vim
+      - wget
+      - whois
+      - xz
+      - zsh
+      - zsh-autosuggestions
+      - zsh-completions
+      - zsh-syntax-highlighting
+    homebrew_cask_packages:
+      - appcleaner
+      - atom
+      - charles
+      - dropbox
+      - firefox
+      - google-chrome
+      - imageoptim
+      - intellij-idea
+      - iterm2
+      - karabiner
+      - keepassx
+      - mumble
+      - onyx
+      - skype
+      - sourcetree
+      - virtualbox
+      - vlc
+      - wireshark
+
+  tasks:
+# Homebrew
+    - name: Install Homebrew Dupes
+      homebrew_tap: tap=homebrew/dupes
+      tags:
+        - homebrew
+    - name: Upgrade Homebrew and installed Homebrew packages
+      homebrew:
+        update_homebrew: yes
+        upgrade_all: yes
+      tags:
+        - homebrew
+    - name: Install Homebrew packages
+      homebrew:
+        name: "{{item}}"
+      with_items:
+        - "{{homebrew_packages}}"
+      tags:
+        - git
+        - homebrew
+        - homebrew-cask
+        - openssh
+        - vim
+        - zsh
+
+# OpenSSH
+    - name: Create symbolic link from ssh to ~/.ssh
+      file:
+        src: "{{pwd}}/ssh"
+        dest: ~/.ssh
+        mode: 0700
+        state: link
+      tags:
+        - openssh
+    - name: Change file permissions in ~/.ssh
+      file:
+        path: ~/.ssh/
+        mode: u=rwX,go=
+        recurse: yes
+        state: directory
+      tags:
+        - openssh
+
+# GnuPG2
+    - name: Change PIN entry program
+      lineinfile:
+        create: yes
+        dest: ~/.gnupg/gpg-agent.conf
+        line: "pinentry-program /usr/local/bin/pinentry-mac"
+      tags:
+        - gnupg
+
+# git
+    - name: Create symbolic link from gitignore to ~/.gitignore
+      file:
+        src: "{{pwd}}/gitignore"
+        dest: ~/.gitignore
+        mode: 0600
+        state: link
+      tags:
+        - git
+    - name: Configure git
+      shell: |
+        git config --global user.name "{{real_name}}"
+        git config --global user.email "{{email}}"
+        git config --global core.editor `which vim`
+        git config --global core.excludesfile "~/.gitignore"
+        git config --global credential.helper osxkeychain
+      args:
+        warn: no
+      tags:
+        - git
+
+# vim
+    - name: Create symbolic link from vimrc to ~/.vimrc
+      file:
+        src: "{{pwd}}/vimrc"
+        dest: ~/.vimrc
+        mode: 0600
+        state: link
+      tags:
+        - vim
+
+# Zsh
+    - name: Install Oh My Zsh
+      shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
+      args:
+        creates: ~/.oh-my-zsh
+      tags:
+        - zsh
+    - name: Change Oh My Zsh theme
+      lineinfile:
+        dest: ~/.zshrc
+        regexp: ^ZSH_THEME=
+        line: ZSH_THEME="random"
+      tags:
+        - zsh
+    - name: Change Oh My Zsh plugin
+      lineinfile:
+        dest: ~/.zshrc
+        regexp: ^plugins=
+        line: plugins=(brew git httpie pip python vagrant)
+      tags:
+        - zsh
+    - name: Add zsh configuration file
+      lineinfile:
+        dest: ~/.zshrc
+        line: "source \"{{pwd}}/config.zsh\""
+      tags:
+        - zsh
+
+# Homebrew Cask
+    - name: Install Homebrew Cask
+      homebrew_tap: tap=caskroom/cask
+      tags:
+        - homebrew-cask
